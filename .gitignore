@@ -1,0 +1,31 @@
+# Visual Studio files
+.vs
+Binaries
+DerivedDataCache
+Intermediate
+Saved
+.idea
+*.opensdf
+*.opendb
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+
+# Unreal Engine files
+Build/*
+!Build/Config
+!Build/Script
+Build/Receipts
+Build/Sigs
+Build/Win64
+DerivedDataCache
+Intermediate
+Saved
+Script
+Staging
+
+# OS Files
+.DS_Store
+Thumbs.db
