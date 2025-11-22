@@ -1,6 +1,7 @@
 // ItemBase.cpp
 
 #include "ItemBase.h"
+#include "EscapeCharacter.h"
 #include "Components/StaticMeshComponent.h"
 
 AItemBase::AItemBase()
@@ -12,7 +13,7 @@ AItemBase::AItemBase()
 
     // Enable overlap events so player can detect the item
     Mesh->SetGenerateOverlapEvents(true);
-    Mesh->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+    Mesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 }
 
 void AItemBase::BeginPlay()
@@ -30,8 +31,20 @@ void AItemBase::OnPickup()
 
 bool AItemBase::OnUse(AEscapeCharacter* UsingCharacter)
 {
-    // Default behavior: item does nothing
-    // Override in child classes like KeyItem or PuzzlePieceItem
+    if (!UsingCharacter) return false;
+
+    // LOGIC: If this item has text, read it!
+    if (!InspectionText.IsEmpty())
+    {
+        // Call a new function on the character (We will write this in Step 3)
+        UsingCharacter->ShowInspectionUI(InspectionText);
+
+        // RETURN FALSE so we DO NOT destroy the item
+        return false;
+    }
+
+    // Default Behavior (Consumables, etc.)
+    UE_LOG(LogTemp, Warning, TEXT("Used Item: %s"), *ItemID.ToString());
 
     if (bDestroyOnUse)
     {

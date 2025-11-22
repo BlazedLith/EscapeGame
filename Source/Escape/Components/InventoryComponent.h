@@ -38,12 +38,17 @@ protected:
 
 public:
 
+	const TArray<AItemBase*>& GetItems() const { return Items; }
+
 	// Delegates for UI to bind to
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnInventorySlotChanged OnSlotChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnSelectedSlotChanged OnSelectedSlotChanged;
+
+	//Check if we have a specific item by ID
+	bool HasItem(FName ItemID) const;
 
 	// Add an item to the first empty slot
 	bool AddItem(AItemBase* NewItem);

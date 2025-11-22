@@ -26,6 +26,12 @@ public:
     // Sets default values for this actor's properties
     AItemBase();
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
+    FText InspectionText;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
+    FName ItemID;
+
 protected:
 
     // Mesh the player sees in the world

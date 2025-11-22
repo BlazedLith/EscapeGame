@@ -58,23 +58,22 @@ void UInventoryComponent::SelectSlot(int32 NewIndex)
 	OnSelectedSlotChanged.Broadcast(NewIndex);
 }
 
-void UInventoryComponent::UseSelectedItem(AEscapeCharacter* Character)
+void UInventoryComponent::UseSelectedItem(class AEscapeCharacter* Character)
 {
-	if (!Character)
-		return;
-
-	AItemBase* Item = GetSelectedItem();
-	if (!Item)
-		return;
-
-	bool bResult = Item->OnUse(Character);
-
-	if (bResult)
+	// Get the item currently selected
+	if (AItemBase* Item = GetSelectedItem())
 	{
-		// If the item destroys itself, or is marked for removal
-		if (!IsValid(Item) || Item->IsActorBeingDestroyed())
+		// Try to use it
+		if (Item->OnUse(Character))
 		{
-			RemoveItem(SelectedIndex);
+			if (!IsValid(Item))
+			{
+				RemoveItem(SelectedIndex);
+			}
+			if (Item->ShouldDestroyOnUse())
+			{
+				RemoveItem(SelectedIndex);
+			}
 		}
 	}
 }
@@ -102,4 +101,17 @@ bool UInventoryComponent::IsFull() const
 			return false;
 	}
 	return true;
+}
+
+bool UInventoryComponent::HasItem(FName TargetItemID) const
+{
+	for (AItemBase* Item : Items)
+	{
+		// Check if item exists AND matches the ID we need
+		if (Item && Item->ItemID == TargetItemID)
+		{
+			return true;
+		}
+	}
+	return false;
 }
