@@ -1,0 +1,37 @@
+#include "BaseHUD.h"
+#include "MainGameWidget.h"
+#include "Kismet/GameplayStatics.h"
+
+void ABaseHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (MainWidgetClass)
+	{
+		// Create the ONE and ONLY widget for Level 2
+		MainWidget = CreateWidget<UMainGameWidget>(GetWorld(), MainWidgetClass);
+		if (MainWidget)
+		{
+			MainWidget->AddToViewport();
+			// Ensure notification text is hidden by default
+			MainWidget->ShowNotification("");
+		}
+	}
+}
+
+void ABaseHUD::UpdateUI(int32 Shards, int32 MaxShards, int32 Time)
+{
+	if (MainWidget)
+	{
+		MainWidget->UpdateShardCount(Shards, MaxShards);
+		MainWidget->UpdateTimer(Time);
+	}
+}
+
+void ABaseHUD::ShowMessage(FString Msg)
+{
+	if (MainWidget)
+	{
+		MainWidget->ShowNotification(Msg);
+	}
+}
