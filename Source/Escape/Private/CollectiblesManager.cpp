@@ -2,6 +2,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "BaseHUD.h" 
 #include "EscapeSaveGame.h"
+#include "GoalZone.h"
 
 // Sets default values
 ACollectiblesManager::ACollectiblesManager()
@@ -61,20 +62,31 @@ void ACollectiblesManager::UpdateHUD()
 		HUDRef->UpdateUI(ShardsRemaining, RequiredShards, FMath::CeilToInt(CurrentTimeRemaining));
 	}
 }
-
 void ACollectiblesManager::CollectShard()
 {
 	if (!bLevelActive) return;
 
 	ShardsRemaining--;
-
-	// Update the counter on screen
 	UpdateHUD();
 
-	// Provide Feedback
 	if (ShardsRemaining <= 0)
 	{
-		if (HUDRef) HUDRef->ShowMessage("GOAL UNLOCKED! Find the exit.");
+		// 1. Show the Unlock Message
+		if (HUDRef) HUDRef->ShowMessage("DOOR UNLOCKED! Find the exit.");
+
+		// 2. Find the GoalZone and PHYSICALLY unlock it
+		TArray<AActor*> GoalActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGoalZone::StaticClass(), GoalActors);
+
+		// Loop through results just in case there is more than one
+		for (AActor* Actor : GoalActors)
+		{
+			AGoalZone* TheGoal = Cast<AGoalZone>(Actor);
+			if (TheGoal)
+			{
+				TheGoal->UnlockDoor();
+			}
+		}
 	}
 }
 
@@ -85,12 +97,17 @@ void ACollectiblesManager::ReachedGoal()
 	// Only finish if shards are collected
 	if (ShardsRemaining <= 0)
 	{
-		FinishLevel();
+		// New Message Logic
+		if (HUDRef) HUDRef->ShowMessage("Welcome to Level 3!");
+
+		// Short delay to read the message before loading
+		FTimerHandle WaitHandle;
+		GetWorldTimerManager().SetTimer(WaitHandle, this, &ACollectiblesManager::FinishLevel, 2.0f, false);
 	}
 	else
 	{
-		// Feedback if player tries to leave too early
-		if (HUDRef) HUDRef->ShowMessage("Goal Locked! You need more shards.");
+		// Feedback if they touch the trigger (physically blocked usually preventing this, but good safety)
+		if (HUDRef) HUDRef->ShowMessage("Door Locked! You need more shards.");
 	}
 }
 

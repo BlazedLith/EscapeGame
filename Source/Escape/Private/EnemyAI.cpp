@@ -56,23 +56,6 @@ void AEnemyAI::Tick(float DeltaTime)
 	}
 
 	MoveAlongPath(DeltaTime);
-
-	// DEBUG: Draw Path
-	for (int i = 0; i < CurrentPath.Num() - 1; ++i)
-	{
-		DrawDebugLine(GetWorld(), CurrentPath[i], CurrentPath[i + 1], FColor::Cyan, false, 0.0f, 0, 5.0f);
-	}
-	// DEBUG: Draw Status
-	if (CurrentPath.Num() == 0)
-	{
-		// RED = Pathfinding Failed (Check Z-Axis or Obstacles)
-		if (GEngine) GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Red, TEXT("AI STATUS: NO PATH FOUND"));
-	}
-	else
-	{
-		// GREEN = Path Found (Should be moving)
-		if (GEngine) GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Green, TEXT("AI STATUS: MOVING"));
-	}
 }
 
 void AEnemyAI::StartPathfinding(const FVector& TargetLocation)
@@ -94,9 +77,7 @@ void AEnemyAI::MoveAlongPath(float DeltaTime)
 	float DistanceToTarget = Direction.Size();
 	Direction.Normalize();
 
-	// === CRITICAL FIX 1: MOVEMENT TOLERANCE ===
-	// Must be SMALLER than Grid Size (e.g. 10.0f). 
-	// If this is 100.0f, the enemy thinks it has already arrived and skips steps.
+	// Tolerance check: Must be significantly smaller than GridSize to avoid skipping nodes
 	if (DistanceToTarget < 10.0f)
 	{
 		PathIndex++;
@@ -105,8 +86,7 @@ void AEnemyAI::MoveAlongPath(float DeltaTime)
 	{
 		FVector NewLocation = CurrentLocation + Direction * MovementSpeed * DeltaTime;
 
-		// === CRITICAL FIX 2: DISABLE SWEEP ===
-		// Use 'false' for sweep. If 'true', the enemy stops if it touches the floor even slightly.
+		// Disable sweep to prevent getting stuck on floor seams
 		SetActorLocation(NewLocation, false);
 
 		if (!Direction.IsNearlyZero())
@@ -121,30 +101,35 @@ void AEnemyAI::MoveAlongPath(float DeltaTime)
 
 TArray<FVector> AEnemyAI::FindPathAStar(const FVector& StartWorldPos, const FVector& TargetWorldPos)
 {
-	// 1. Grid Alignment
-	FVector StartGridPos = FVector(FMath::RoundToFloat(StartWorldPos.X / GridSize) * GridSize,
+	// 1. Calculate Grid Positions (Lifted +50z to avoid floor clipping issues)
+	float PathHeight = StartWorldPos.Z + 50.0f;
+
+	FVector StartGridPos = FVector(
+		FMath::RoundToFloat(StartWorldPos.X / GridSize) * GridSize,
 		FMath::RoundToFloat(StartWorldPos.Y / GridSize) * GridSize,
-		StartWorldPos.Z);
+		PathHeight
+	);
 
-	// === CRITICAL FIX 3: Z-AXIS FLATTENING ===
-	// We use StartGridPos.Z instead of TargetWorldPos.Z.
-	// This forces the "Goal" to be on the same height level as the Enemy.
-	FVector TargetGridPos = FVector(FMath::RoundToFloat(TargetWorldPos.X / GridSize) * GridSize,
+	FVector TargetGridPos = FVector(
+		FMath::RoundToFloat(TargetWorldPos.X / GridSize) * GridSize,
 		FMath::RoundToFloat(TargetWorldPos.Y / GridSize) * GridSize,
-		StartGridPos.Z);
+		PathHeight
+	);
 
-	// Visual Debug
-	DrawDebugSphere(GetWorld(), StartGridPos, 50.0f, 12, FColor::Green, false, 0.0f, 0, 5.0f);
-	DrawDebugSphere(GetWorld(), TargetGridPos, 50.0f, 12, FColor::Red, false, 0.0f, 0, 5.0f);
+	// Basic Validation: If start or end are unwalkable, return empty path immediately
+	if (!IsWalkable(StartGridPos) || !IsWalkable(TargetGridPos))
+	{
+		return TArray<FVector>();
+	}
 
+	// --- A* ALGORITHM EXECUTION ---
 	TArray<FNode> OpenList;
 	TSet<FNode> ClosedSet;
 	TMap<FVector, FNode*> VisitedNodes;
 
-	auto CleanupMemory = [&VisitedNodes]()
-		{
-			for (auto It : VisitedNodes) delete It.Value;
-			VisitedNodes.Empty();
+	auto CleanupMemory = [&VisitedNodes]() {
+		for (auto It : VisitedNodes) delete It.Value;
+		VisitedNodes.Empty();
 		};
 
 	float HScoreStart = CalculateHScore(StartGridPos, TargetGridPos);
@@ -156,12 +141,14 @@ TArray<FVector> AEnemyAI::FindPathAStar(const FVector& StartWorldPos, const FVec
 
 	while (OpenList.Num() > 0)
 	{
+		// Sort by lowest F Cost
 		OpenList.Sort([](const FNode& A, const FNode& B) { return A.F() < B.F(); });
 		FNode CurrentNode = OpenList[0];
 		OpenList.RemoveAt(0);
 
 		FNode* CurrentHeapNode = VisitedNodes.FindRef(CurrentNode.Position);
 
+		// Check if we reached the target (Approximate match)
 		if (CurrentNode.Position.Equals(TargetGridPos, GridSize / 2.0f))
 		{
 			TArray<FVector> Path;
@@ -235,51 +222,36 @@ void AEnemyAI::GetNeighbors(const FNode& CurrentNode, TArray<FNode>& Neighbors, 
 
 bool AEnemyAI::IsWalkable(const FVector& Location) const
 {
-	FHitResult HitResult;
+	UWorld* World = GetWorld();
+	if (!World) return false;
 
+	// 1. Setup Collision Params (Ignore Player & Enemy to prevent blocking path)
 	FCollisionQueryParams Params;
-
 	Params.AddIgnoredActor(this);
+	if (TargetPlayer) Params.AddIgnoredActor(TargetPlayer);
 
+	// 2. Define Dimensions
+	FVector TestLocation = Location + FVector(0, 0, 60.0f); // Waist height
+	float CheckRadius = 30.0f; // Skinny check
 
+	// 3. OBSTACLE CHECK (Sphere Trace against WorldStatic)
+	FHitResult HitResult;
+	bool bHitWall = World->SweepSingleByChannel(
+		HitResult, TestLocation, TestLocation + FVector(0, 0, 1),
+		FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(CheckRadius), Params
+	);
 
-	float CapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	if (bHitWall) return false;
 
+	// 4. FLOOR CHECK (Deep Trace using Visibility)
+	// We trace down significantly to handle uneven terrain
+	FVector TraceEnd = TestLocation - FVector(0, 0, 400.0f);
 
+	bool bHitFloor = World->LineTraceSingleByChannel(
+		HitResult, TestLocation, TraceEnd, ECC_Visibility, Params
+	);
 
-	// Trace Start: Top of capsule
-
-	FVector TraceStart = Location + FVector(0, 0, CapsuleHalfHeight);
-
-	// Trace End: Stop 15 units ABOVE the floor to avoid hitting it
-
-	FVector TraceEnd = Location - FVector(0, 0, CapsuleHalfHeight - 15.0f);
-
-
-
-	// === CRITICAL FIX 4: CHECK RADIUS ===
-
-	// Use a small radius (10.0f) instead of full capsule size.
-
-	// This ensures we only block if the center of the path is truly blocked.
-
-	FCollisionShape SphereShape = FCollisionShape::MakeSphere(10.0f);
-
-	// Draw PURPLE DOTS where the AI is trying to walk
-
-	DrawDebugPoint(GetWorld(), Location, 10.0f, FColor::Purple, false, 0.1f);
-
-
-
-	if (GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECC_WorldStatic, SphereShape, Params))
-
-	{
-
-		return false; // Wall hit
-
-	}
-
-	return true; // Walkable
+	return bHitFloor;
 }
 
 void AEnemyAI::OnHitPlayer(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)

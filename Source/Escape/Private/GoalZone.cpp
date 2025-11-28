@@ -9,24 +9,22 @@
 // Sets default values
 AGoalZone::AGoalZone()
 {
-	// This actor doesn't need to update every frame
 	PrimaryActorTick.bCanEverTick = false;
 
-	// 1. Setup the Trigger Volume (Root Component)
+	// Trigger Volume setup remains the same...
 	TriggerVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerVolume"));
 	RootComponent = TriggerVolume;
-
-	// Configure the trigger volume size and type
-	TriggerVolume->SetBoxExtent(FVector(150.0f, 150.0f, 150.0f)); // Make it a large, visible trigger area
-	TriggerVolume->SetCollisionProfileName(TEXT("Trigger")); // Set to the standard Trigger profile
-
-	// Bind the function to the overlap event
+	TriggerVolume->SetBoxExtent(FVector(150.0f, 150.0f, 150.0f));
+	TriggerVolume->SetCollisionProfileName(TEXT("Trigger"));
 	TriggerVolume->OnComponentBeginOverlap.AddDynamic(this, &AGoalZone::OnOverlapBegin);
 
-	// 2. Setup the Visual Mesh (Child Component)
+	// 2. CHANGE MESH SETTINGS HERE
 	GoalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GoalMesh"));
 	GoalMesh->SetupAttachment(RootComponent);
-	GoalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Visual mesh should not interfere with physics
+
+	// CHANGE FROM NoCollision TO BlockAll
+	GoalMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GoalMesh->SetCollisionProfileName(TEXT("BlockAll"));
 }
 
 // Called when the game starts or when spawned
@@ -57,6 +55,15 @@ void AGoalZone::FindCollectiblesManager()
 		// Log an error if the Manager is missing, as the win condition will fail.
 		UE_LOG(LogTemp, Error, TEXT("GoalZone: ACollectiblesManager was not found in the level! The win condition will not work."));
 	}
+}
+
+void AGoalZone::UnlockDoor()
+{
+	// Turn off collision so the player can walk through
+	GoalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Optional: Make it invisible or change color to show it's open
+	// GoalMesh->SetVisibility(false); 
 }
 
 void AGoalZone::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

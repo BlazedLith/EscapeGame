@@ -17,32 +17,35 @@ void UMainGameWidget::UpdateTimer(int32 TimeRemaining)
 {
 	if (TimeDisplay)
 	{
-		// Format: "01:20"
 		int32 Min = TimeRemaining / 60;
 		int32 Sec = TimeRemaining % 60;
-		FString Text = FString::Printf(TEXT("%02d:%02d"), Min, Sec);
+
+		// CHANGED: Added "Timer: " prefix
+		FString Text = FString::Printf(TEXT("Timer: %02d:%02d"), Min, Sec);
+
 		TimeDisplay->SetText(FText::FromString(Text));
 	}
 }
 
 void UMainGameWidget::ShowNotification(FString Message)
 {
-	if (NotificationDisplay)
-	{
-		NotificationDisplay->SetText(FText::FromString(Message));
+    if (NotificationDisplay)
+    {
+        NotificationDisplay->SetText(FText::FromString(Message));
+        NotificationDisplay->SetVisibility(ESlateVisibility::Visible);
 
-		// Make it visible
-		NotificationDisplay->SetVisibility(ESlateVisibility::Visible);
-
-		// Auto-hide after 3 seconds using a Timer
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, [this]()
-			{
-				// Check if 'this' is still valid before accessing members
-				if (this && this->NotificationDisplay)
-				{
-					this->NotificationDisplay->SetVisibility(ESlateVisibility::Hidden);
-				}
-			}, 3.0f, false);
-	}
+        // SAFER: Check if the World exists before setting a timer
+        if (UWorld* World = GetWorld())
+        {
+            FTimerHandle Handle;
+            World->GetTimerManager().SetTimer(Handle, [this]()
+                {
+                    // Verify the object is still valid (IsValid is an Unreal check)
+                    if (IsValid(this) && NotificationDisplay)
+                    {
+                        NotificationDisplay->SetVisibility(ESlateVisibility::Hidden);
+                    }
+                }, 3.0f, false);
+        }
+    }
 }

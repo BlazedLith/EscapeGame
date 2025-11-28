@@ -20,6 +20,9 @@ public:
 	// Sets default values for this actor's properties
 	AGoalZone();
 
+	UFUNCTION()
+	void UnlockDoor();
+
 	// === COMPONENTS ===
 
 	// A simple cube/mesh to represent the goal visually (optional, but good for placement)

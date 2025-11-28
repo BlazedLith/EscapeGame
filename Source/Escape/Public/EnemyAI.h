@@ -44,8 +44,9 @@ struct FNode
 	// Comparison operator for use in TSet/TMap/sorting
 	bool operator==(const FNode& Other) const
 	{
-		// Compare based on close proximity (50.0f is half of the GridSize default)
-		return Position.Equals(Other.Position, 50.0f);
+		// FIX: Reduce tolerance to 1.0f. 
+		// We only want to match if they are practically the SAME point.
+		return Position.Equals(Other.Position, 1.0f);
 	}
 };
 
