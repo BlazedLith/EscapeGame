@@ -15,6 +15,8 @@ class ESCAPE_API ABaseHUD : public AHUD
 public:
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	// The Manager calls this to update the UI
 	void UpdateUI(int32 Shards, int32 MaxShards, int32 Time);
 	void ShowMessage(FString Msg);

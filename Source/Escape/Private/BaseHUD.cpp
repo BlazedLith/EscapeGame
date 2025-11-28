@@ -35,3 +35,15 @@ void ABaseHUD::ShowMessage(FString Msg)
 		MainWidget->ShowNotification(Msg);
 	}
 }
+
+void ABaseHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// CRITICAL: Remove the Level 2 UI from the viewport
+	if (MainWidget)
+	{
+		MainWidget->RemoveFromParent();
+		MainWidget = nullptr;
+	}
+}

@@ -22,6 +22,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	// --- INTERNAL HELPERS ---
 	void FinishLevel();
 	void RestartLevel();

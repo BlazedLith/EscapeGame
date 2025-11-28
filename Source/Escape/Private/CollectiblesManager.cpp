@@ -56,8 +56,8 @@ void ACollectiblesManager::Tick(float DeltaTime)
 
 void ACollectiblesManager::UpdateHUD()
 {
-	// Send the raw data to the HUD, which passes it to the Widget
-	if (HUDRef)
+	// Use IsValid()! A simple (HUDRef) check passes even if the object is about to be deleted.
+	if (IsValid(HUDRef))
 	{
 		HUDRef->UpdateUI(ShardsRemaining, RequiredShards, FMath::CeilToInt(CurrentTimeRemaining));
 	}
@@ -124,11 +124,16 @@ void ACollectiblesManager::PlayerHitByEnemy()
 
 void ACollectiblesManager::FinishLevel()
 {
+	// 1. Stop Logic
 	bLevelActive = false;
+	SetActorTickEnabled(false); // Stop Ticking immediately
 
-	UE_LOG(LogTemp, Warning, TEXT("Level 2 Complete. Saving and Loading Level 3..."));
+	// 2. Kill all timers (Prevents the "Zombie" crash)
+	GetWorldTimerManager().ClearAllTimersForObject(this);
 
-	// 1. Save Game Logic (Persist data between levels)
+	UE_LOG(LogTemp, Warning, TEXT("Level Complete. Transitioning..."));
+
+	// 3. Save Game
 	UEscapeSaveGame* SaveInst = Cast<UEscapeSaveGame>(UGameplayStatics::CreateSaveGameObject(UEscapeSaveGame::StaticClass()));
 	if (SaveInst)
 	{
@@ -136,14 +141,19 @@ void ACollectiblesManager::FinishLevel()
 		UGameplayStatics::SaveGameToSlot(SaveInst, SaveInst->SaveSlotName, SaveInst->UserIndex);
 	}
 
-	// 2. Direct Transition
+	// 4. Remove HUD Widget immediately (Double safety)
+	if (HUDRef)
+	{
+		// We can't call RemoveFromParent on the HUD Actor, 
+		// but we can tell the HUD to clean up its widget if we added a function for it.
+		// For now, the BaseHUD::EndPlay will handle it, but we NULL the reference here.
+		HUDRef = nullptr;
+	}
+
+	// 5. Open Level
 	if (!NextLevelName.IsNone())
 	{
 		UGameplayStatics::OpenLevel(this, NextLevelName);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("NextLevelName is not set in CollectiblesManager Details Panel!"));
 	}
 }
 
@@ -162,4 +172,11 @@ void ACollectiblesManager::RestartLevel()
 			const FName CurrentLevelName = FName(*UGameplayStatics::GetCurrentLevelName(this));
 			UGameplayStatics::OpenLevel(this, CurrentLevelName);
 		}, RestartDelay, false);
+}
+
+void ACollectiblesManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	// Ensure no timers try to fire after the level closes
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 }

@@ -34,18 +34,21 @@ void UMainGameWidget::ShowNotification(FString Message)
         NotificationDisplay->SetText(FText::FromString(Message));
         NotificationDisplay->SetVisibility(ESlateVisibility::Visible);
 
-        // SAFER: Check if the World exists before setting a timer
-        if (UWorld* World = GetWorld())
-        {
-            FTimerHandle Handle;
-            World->GetTimerManager().SetTimer(Handle, [this]()
+        // 1. Create a "Weak Pointer" to self. This is safe to check later.
+        TWeakObjectPtr<UMainGameWidget> WeakThis(this);
+
+        FTimerHandle Handle;
+        // 2. Capture the Weak Pointer, NOT 'this'
+        GetWorld()->GetTimerManager().SetTimer(Handle, [WeakThis]()
+            {
+                // 3. Check if the widget is still alive
+                if (UMainGameWidget* StrongThis = WeakThis.Get())
                 {
-                    // Verify the object is still valid (IsValid is an Unreal check)
-                    if (IsValid(this) && NotificationDisplay)
+                    if (StrongThis->NotificationDisplay)
                     {
-                        NotificationDisplay->SetVisibility(ESlateVisibility::Hidden);
+                        StrongThis->NotificationDisplay->SetVisibility(ESlateVisibility::Hidden);
                     }
-                }, 3.0f, false);
-        }
+                }
+            }, 3.0f, false);
     }
 }
