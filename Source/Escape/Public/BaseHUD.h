@@ -18,7 +18,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// The Manager calls this to update the UI
-	void UpdateUI(int32 Shards, int32 MaxShards, int32 Time);
+	void UpdateUI(int32 Coins, int32 MaxCoins, int32 Time);
 	void ShowMessage(FString Msg);
 
 protected:

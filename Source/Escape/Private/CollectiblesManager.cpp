@@ -22,7 +22,7 @@ void ACollectiblesManager::BeginPlay()
 	}
 
 	// 2. Initialize Game State
-	ShardsRemaining = RequiredShards;
+	CoinsRemaining = RequiredCoins;
 	CurrentTimeRemaining = MaxLevelTime;
 	bLevelActive = true;
 
@@ -30,7 +30,7 @@ void ACollectiblesManager::BeginPlay()
 	UpdateHUD();
 	if (HUDRef)
 	{
-		HUDRef->ShowMessage("Collect all shards to unlock the Goal!");
+		HUDRef->ShowMessage("Collect all coins to unlock the Goal!");
 	}
 }
 
@@ -59,17 +59,17 @@ void ACollectiblesManager::UpdateHUD()
 	// Use IsValid()! A simple (HUDRef) check passes even if the object is about to be deleted.
 	if (IsValid(HUDRef))
 	{
-		HUDRef->UpdateUI(ShardsRemaining, RequiredShards, FMath::CeilToInt(CurrentTimeRemaining));
+		HUDRef->UpdateUI(CoinsRemaining, RequiredCoins, FMath::CeilToInt(CurrentTimeRemaining));
 	}
 }
-void ACollectiblesManager::CollectShard()
+void ACollectiblesManager::CollectCoin()
 {
 	if (!bLevelActive) return;
 
-	ShardsRemaining--;
+	CoinsRemaining--;
 	UpdateHUD();
 
-	if (ShardsRemaining <= 0)
+	if (CoinsRemaining <= 0)
 	{
 		// 1. Show the Unlock Message
 		if (HUDRef) HUDRef->ShowMessage("DOOR UNLOCKED! Find the exit.");
@@ -95,7 +95,7 @@ void ACollectiblesManager::ReachedGoal()
 	if (!bLevelActive) return;
 
 	// Only finish if shards are collected
-	if (ShardsRemaining <= 0)
+	if (CoinsRemaining <= 0)
 	{
 		// New Message Logic
 		if (HUDRef) HUDRef->ShowMessage("Welcome to Level 3!");
@@ -107,7 +107,7 @@ void ACollectiblesManager::ReachedGoal()
 	else
 	{
 		// Feedback if they touch the trigger (physically blocked usually preventing this, but good safety)
-		if (HUDRef) HUDRef->ShowMessage("Door Locked! You need more shards.");
+		if (HUDRef) HUDRef->ShowMessage("Door Locked! You need more coins.");
 	}
 }
 

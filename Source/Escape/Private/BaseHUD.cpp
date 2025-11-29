@@ -19,11 +19,11 @@ void ABaseHUD::BeginPlay()
 	}
 }
 
-void ABaseHUD::UpdateUI(int32 Shards, int32 MaxShards, int32 Time)
+void ABaseHUD::UpdateUI(int32 Coins, int32 MaxCoins, int32 Time)
 {
 	if (MainWidget)
 	{
-		MainWidget->UpdateShardCount(Shards, MaxShards);
+		MainWidget->UpdateCoinCount(Coins, MaxCoins);
 		MainWidget->UpdateTimer(Time);
 	}
 }

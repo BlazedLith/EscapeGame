@@ -17,7 +17,7 @@ class ESCAPE_API UMainGameWidget : public UUserWidget
 
 public:
 	// Update functions called by the HUD
-	void UpdateShardCount(int32 CurrentShards, int32 MaxShards);
+	void UpdateCoinCount(int32 CurrentCoins, int32 MaxCoins);
 	void UpdateTimer(int32 TimeRemaining);
 	void ShowNotification(FString Message);
 
@@ -25,7 +25,7 @@ protected:
 	// These names MUST match the Hierarchy in your Widget Blueprint.
 
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* ShardDisplay;
+	UTextBlock* CoinDisplay;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* TimeDisplay;

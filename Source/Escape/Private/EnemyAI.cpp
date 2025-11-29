@@ -56,6 +56,36 @@ void AEnemyAI::Tick(float DeltaTime)
 	}
 
 	MoveAlongPath(DeltaTime);
+
+	// === NEW: MANUAL CAPTURE CHECK ===
+	// Since we disabled Sweep, we manually check if we are touching the player.
+	if (TargetPlayer)
+	{
+		float DistanceToPlayer = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
+
+		// 80.0f is slightly larger than (EnemyRadius 34 + PlayerRadius 34)
+		// This ensures we catch the player even if physics is pushing us apart.
+		if (DistanceToPlayer < 80.0f)
+		{
+			NotifyManagerOfPlayerHit();
+		}
+	}
+	// =================================
+
+	/* DEBUG: Draw Path
+	//for (int i = 0; i < CurrentPath.Num() - 1; ++i)
+	{
+		DrawDebugLine(GetWorld(), CurrentPath[i], CurrentPath[i + 1], FColor::Cyan, false, 0.0f, 0, 5.0f);
+	}
+
+	if (CurrentPath.Num() == 0)
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Red, TEXT("AI STATUS: NO PATH FOUND"));
+	}
+	else
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Green, TEXT("AI STATUS: MOVING"));
+	}*/
 }
 
 void AEnemyAI::StartPathfinding(const FVector& TargetLocation)

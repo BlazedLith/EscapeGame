@@ -53,7 +53,7 @@ void ACollectibleShard::NotifyManagerOfCollection()
 		ACollectiblesManager* Manager = Cast<ACollectiblesManager>(FoundActors[0]);
 		if (Manager)
 		{
-			Manager->CollectShard();
+			Manager->CollectCoin();
 		}
 	}
 }

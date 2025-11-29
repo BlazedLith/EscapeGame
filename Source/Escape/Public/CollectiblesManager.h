@@ -34,7 +34,7 @@ public:
 
 	/** Called by the Shard Actor when overlapped */
 	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void CollectShard();
+	void CollectCoin();
 
 	/** Called by the GoalZone Actor when overlapped */
 	UFUNCTION(BlueprintCallable, Category = "Game Flow")
@@ -56,7 +56,7 @@ public:
 
 	/** The number of shards the player must collect to win. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Settings")
-	int32 RequiredShards = 5;
+	int32 RequiredCoins = 5;
 
 	/** The maximum time (in seconds) allowed for the level. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Settings")
@@ -68,7 +68,7 @@ public:
 
 private:
 	// --- STATE VARIABLES ---
-	int32 ShardsRemaining;
+	int32 CoinsRemaining;
 	float CurrentTimeRemaining;
 	bool bLevelActive = false;
 	FTimerHandle RestartTimerHandle;
