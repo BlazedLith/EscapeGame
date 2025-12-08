@@ -17,6 +17,8 @@
 #include "DrawDebugHelpers.h"
 #include "Items/ItemBase.h"
 
+#include "Engine/Engine.h"
+
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AEscapeCharacter::AEscapeCharacter()
@@ -123,6 +125,15 @@ void AEscapeCharacter::Tick(float DeltaTime)
             }
         }
     }
+    //LEVEL 3 EDITS
+    // // --- ADD THIS INSIDE void AEscapeCharacter::Tick(float DeltaTime) ---
+    
+    // Level 3: Auto-Rewind if falling into the void
+    if (GetActorLocation().Z < KillZThreshold)
+    {
+        PopAndRewind();
+    }
+    //LEVEL 3 EDITS END 
 }
 
 void AEscapeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -245,19 +256,57 @@ void AEscapeCharacter::UseSelectedItem()
 
 void AEscapeCharacter::TryPickupItem()
 {
+    // 1. IF HOLDING SOMETHING -> DROP IT
+    if (HeldCube)
+    {
+        // Detach from camera
+        HeldCube->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+        // Re-enable Physics (Gravity)
+        if (HeldCube->MeshComp)
+        {
+            HeldCube->MeshComp->SetSimulatePhysics(true);
+            HeldCube->MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        }
+
+        // Forget it
+        HeldCube = nullptr;
+        return; // Stop here, don't try to pick up immediately again
+    }
+
+    // 2. IF HANDS EMPTY -> TRY TO PICK UP
     FHitResult Hit;
-    // Use the helper so logic is consistent with the UI/Tick
     if (GetLookTarget(Hit))
     {
         AActor* HitActor = Hit.GetActor();
         if (!HitActor) return;
 
-        // --- PRIORITY 1: INTERACTABLES (Doors, Drawers, Levers) ---
-        if (IInteractionInterface* Interface = Cast<IInteractionInterface>(HitActor))
+        // --- Priority 1: Data Cube (The Puzzle) ---
+        if (ADataCube* Cube = Cast<ADataCube>(HitActor))
+        {
+            // Disable Physics (So it doesn't fall out of hands)
+            if (Cube->MeshComp)
+            {
+                Cube->MeshComp->SetSimulatePhysics(false);
+                Cube->MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Prevent pushing player
+            }
+
+            // Attach to Camera (Carry it)
+            Cube->AttachToComponent(FPSCamera, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+            // Move it slightly forward so it's not inside your face
+            Cube->SetActorRelativeLocation(FVector(150.0f, 0.0f, 0.0f));
+            Cube->SetActorRelativeRotation(FRotator::ZeroRotator);
+
+            // Remember it
+            HeldCube = Cube;
+        }
+        // --- Priority 2: Standard Interaction ---
+        else if (IInteractionInterface* Interface = Cast<IInteractionInterface>(HitActor))
         {
             Interface->OnInteract(this);
         }
-        // --- PRIORITY 2: ITEMS (Pickup) ---
+        // --- Priority 3: Inventory Items ---
         else if (AItemBase* Item = Cast<AItemBase>(HitActor))
         {
             if (InventoryComp && InventoryComp->AddItem(Item))
@@ -443,3 +492,52 @@ void AEscapeCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
         PC->bShowMouseCursor = false;
     }
 }
+
+//LEVEL 3 EDITS 
+// --- LEVEL 3: STACK IMPLEMENTATION ---
+
+void AEscapeCharacter::PushSafeLocation()
+{
+    FVector CurrentLoc = GetActorLocation();
+
+    // Prevent saving the exact same spot twice (spam protection)
+    if (LocationStack.Num() > 0)
+    {
+        if (FVector::Dist(LocationStack.Last(), CurrentLoc) < 50.0f)
+        {
+            return;
+        }
+    }
+
+    // PUSH: Add to top of stack
+    LocationStack.Push(CurrentLoc);
+
+    if (GEngine)
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Checkpoint!"));
+}
+
+void AEscapeCharacter::PopAndRewind()
+{
+    // POP: Check if we have a saved spot
+    if (LocationStack.Num() > 0)
+    {
+        // Take the last location off the stack
+        FVector LastSafeSpot = LocationStack.Pop();
+
+        // Teleport the player
+        SetActorLocation(LastSafeSpot);
+
+        // Stop movement so you don't keep falling
+        GetCharacterMovement()->StopMovementImmediately();
+
+        if (GEngine)
+            GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, TEXT("You fell!"));
+    }
+    else
+    {
+        // If stack is empty, reset to 0,0,100 (Level Start)
+        SetActorLocation(FVector(0, 0, 100));
+        GetCharacterMovement()->StopMovementImmediately();
+    }
+}
+//LEVEL 3 EDITS END 
