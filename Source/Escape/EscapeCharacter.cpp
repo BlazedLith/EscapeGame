@@ -50,12 +50,11 @@ void AEscapeCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 1. CHECK LEVEL CONTEXT
     // Get the name of the current map
     FString LevelName = GetWorld()->GetName();
 
     // If we are in Level 2, we enable Pacman Mode and SKIP creating the Inventory UI
-    if (LevelName.Contains("Level2"))
+    if (LevelName.Contains("Level2") || LevelName.Contains("Level3"))
     {
         bIsPacmanMode = true;
         SetInventoryVisible(false);
@@ -409,5 +408,38 @@ void AEscapeCharacter::QuitGame()
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, true);
+    }
+}
+
+void AEscapeCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    // 1. Remove Inventory UI
+    if (InventoryWidget)
+    {
+        InventoryWidget->RemoveFromParent();
+        InventoryWidget = nullptr;
+    }
+
+    // 2. Remove Message UI
+    if (MessageWidget)
+    {
+        MessageWidget->RemoveFromParent();
+        MessageWidget = nullptr;
+    }
+
+    // 3. Remove Inspection UI
+    if (InspectionWidget)
+    {
+        InspectionWidget->RemoveFromParent();
+        InspectionWidget = nullptr;
+    }
+
+    // 4. Ensure Input is reset to Game Mode (fixes mouse stuck issues)
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        PC->SetInputMode(FInputModeGameOnly());
+        PC->bShowMouseCursor = false;
     }
 }
