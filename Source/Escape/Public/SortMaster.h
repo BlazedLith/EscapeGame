@@ -32,4 +32,8 @@ private:
     int32 StrikeCount = 0;
     bool bHasCheckedAttempt = false;
     bool bPuzzleSolved = false;
+
+
+protected:
+    float StabilityTimer = 0.0f;
 };
