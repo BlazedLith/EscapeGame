@@ -1,14 +1,11 @@
-// Door.cpp
 #include "Items/ADoor.h" 
-#include "EscapeCharacter.h"
+#include "EscapeCharacter.h" 
 #include "Components/InventoryComponent.h"
 #include "Items/ItemBase.h"
-#include "Kismet/GameplayStatics.h" 
-#include "TimerManager.h"           
 
 ADoor::ADoor()
 {
-    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
 
     DoorFrame = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DoorFrame"));
     RootComponent = DoorFrame;
@@ -22,8 +19,6 @@ ADoor::ADoor()
 
 void ADoor::OnInteract(AEscapeCharacter* Caller)
 {
-    if (bIsTransitioning) return;
-
     if (!Caller) return;
     UInventoryComponent* Inv = Caller->GetInventoryComponent();
 
@@ -44,13 +39,13 @@ void ADoor::OnInteract(AEscapeCharacter* Caller)
                 Caller->ShowNotification(FText::FromString(Msg));
                 return false;
             }
-
             return true;
         };
 
     switch (CurrentState)
     {
     case EDoorState::Blocked:
+        // 1. Check for Pliers to cut wires
         if (CheckHeldItem(WireItemID))
         {
             Caller->ShowNotification(FText::FromString("Wire cut!"));
@@ -61,43 +56,28 @@ void ADoor::OnInteract(AEscapeCharacter* Caller)
         break;
 
     case EDoorState::Locked:
+        // 2. Check for Key to unlock
         if (CheckHeldItem(KeyItemID))
         {
-            bIsTransitioning = true;
-            // --- NEW LOGIC START ---
-            Caller->ShowNotification(FText::FromString("Door Unlocked. Escaping..."));
+            // Visually Open
+            OpenDoor();
+            CurrentState = EDoorState::Open;
 
-            // 1. Save the Game (So we keep our items in the next level)
-            Caller->SaveGame();
-
-            // 2. Check if we should transition
+            // --- TRANSITION LOGIC ---
             if (!NextLevelName.IsNone())
             {
-                UE_LOG(LogTemp, Warning, TEXT("Door Unlocked! Loading %s"), *NextLevelName.ToString());
-
-                // Visual: Open the door immediately
-                OpenDoor();
-
-                // Logic: Load level after 1.0 second (so player sees the door move)
-                FTimerHandle TimerHandle;
-                GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-                    {
-                        UGameplayStatics::OpenLevel(this, NextLevelName);
-                    }, 1.0f, false);
+                // Calls the Character function to Save "NextLevelName" and transition
+                Caller->CompleteLevel(NextLevelName);
             }
             else
             {
-                // If no level name is set, just open normally
-                OpenDoor();
-                bIsTransitioning = false;
+                Caller->ShowNotification(FText::FromString("Door Unlocked."));
             }
-            // --- NEW LOGIC END ---
-
-            CurrentState = EDoorState::Open;
         }
         break;
 
     case EDoorState::Open:
+        // Already open, do nothing
         break;
     }
 }

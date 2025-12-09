@@ -49,6 +49,14 @@ public:
     USkeletalMeshComponent* GetFirstPersonMesh() const { return FPSMesh; }
     UCameraComponent* GetFirstPersonCameraComponent() const { return FPSCamera; }
 
+    // Handles saving the specific "Next Level" name and then opening it
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void CompleteLevel(FName NextLevelName);
+
+    // Deletes the save file (Used when the game is fully beaten)
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void ClearSaveGameData();
+
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -135,10 +143,6 @@ protected:
     UFUNCTION(BlueprintCallable, Category = "Input")
     virtual void DoJumpEnd();
 
-    // =========================================================
-    //               LEVEL 3 EDITS (Stack & Physics)
-    // =========================================================
-protected:
     // 1. The Stack (Undo Mechanic)
     UPROPERTY()
     TArray<FVector> LocationStack;
@@ -157,5 +161,4 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Level3")
     void PopAndRewind();
-    // =========================================================
 };

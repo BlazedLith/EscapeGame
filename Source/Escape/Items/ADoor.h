@@ -48,12 +48,10 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Lock")
     float OpenYaw = 90.0f;
 
-    // --- NEW: Level Transition ---
-    // Name of the level to load (e.g. "Level2"). Leave None to just open.
+    // --- LEVEL TRANSITION ---
+    // Name of the level to load (e.g. "Level2").
     UPROPERTY(EditAnywhere, Category = "Game Flow")
     FName NextLevelName;
-
-    bool bIsTransitioning = false;
 
     void OpenDoor();
 };

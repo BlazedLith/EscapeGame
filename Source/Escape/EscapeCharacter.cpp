@@ -52,6 +52,16 @@ void AEscapeCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        // 1. Hide the mouse cursor so you can look around
+        PC->bShowMouseCursor = false;
+
+        // 2. Tell the engine to send all input to the Game (Movement/Look), not UI
+        FInputModeGameOnly GameInputMode;
+        PC->SetInputMode(GameInputMode);
+    }
+
     // Get the name of the current map
     FString LevelName = GetWorld()->GetName();
 
@@ -413,43 +423,6 @@ void AEscapeCharacter::SetInventoryVisible(bool bVisible)
 
     InventoryWidget->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 }
-void AEscapeCharacter::SaveGame()
-{
-    UEscapeSaveGame* SaveInst = Cast<UEscapeSaveGame>(UGameplayStatics::CreateSaveGameObject(UEscapeSaveGame::StaticClass()));
-    if (SaveInst)
-    {
-        // Record Basic Data
-        SaveInst->PlayerLocation = GetActorLocation();
-        SaveInst->PlayerRotation = GetActorRotation();
-        SaveInst->CurrentLevelName = FName(*GetWorld()->GetName());
-
-        // Record Inventory IDs
-        if (InventoryComp)
-        {
-            for (AItemBase* Item : InventoryComp->GetItems())
-            {
-                if (Item) SaveInst->InventoryItems.Add(Item->ItemID);
-            }
-        }
-
-        UGameplayStatics::SaveGameToSlot(SaveInst, SaveInst->SaveSlotName, SaveInst->UserIndex);
-        UE_LOG(LogTemp, Log, TEXT("Game Saved!"));
-    }
-}
-
-void AEscapeCharacter::LoadGame()
-{
-    if (UGameplayStatics::DoesSaveGameExist("EscapeSaveSlot", 0))
-    {
-        UEscapeSaveGame* LoadedGame = Cast<UEscapeSaveGame>(UGameplayStatics::LoadGameFromSlot("EscapeSaveSlot", 0));
-        if (LoadedGame && InventoryComp && !bIsPacmanMode)
-        {
-            // In a real full game, we would respawn items here. 
-            // For now, we just acknowledge the data exists.
-            UE_LOG(LogTemp, Log, TEXT("Game Loaded. Found %d items."), LoadedGame->InventoryItems.Num());
-        }
-    }
-}
 
 void AEscapeCharacter::QuitGame()
 {
@@ -493,9 +466,63 @@ void AEscapeCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
     }
 }
 
-//LEVEL 3 EDITS 
-// --- LEVEL 3: STACK IMPLEMENTATION ---
+void AEscapeCharacter::SaveGame()
+{
+    UEscapeSaveGame* SaveInst = Cast<UEscapeSaveGame>(UGameplayStatics::CreateSaveGameObject(UEscapeSaveGame::StaticClass()));
+    if (SaveInst)
+    {
+        // Record Basic Data
+        SaveInst->PlayerLocation = GetActorLocation();
+        SaveInst->PlayerRotation = GetActorRotation();
+        SaveInst->CurrentLevelName = FName(*GetWorld()->GetName());
 
+        // Record Inventory IDs
+        if (InventoryComp)
+        {
+            for (AItemBase* Item : InventoryComp->GetItems())
+            {
+                if (Item) SaveInst->InventoryItems.Add(Item->ItemID);
+            }
+        }
+
+        UGameplayStatics::SaveGameToSlot(SaveInst, SaveInst->SaveSlotName, SaveInst->UserIndex);
+
+        // --- CHANGE: Show Widget Message instead of just Log ---
+        ShowNotification(FText::FromString("Game Progress Saved!"));
+        UE_LOG(LogTemp, Log, TEXT("Game Saved!"));
+    }
+}
+
+// 2. UPDATE LOAD GAME (Visual Feedback)
+void AEscapeCharacter::LoadGame()
+{
+    if (UGameplayStatics::DoesSaveGameExist("EscapeSaveSlot", 0))
+    {
+        UEscapeSaveGame* LoadedGame = Cast<UEscapeSaveGame>(UGameplayStatics::LoadGameFromSlot("EscapeSaveSlot", 0));
+
+        if (LoadedGame)
+        {
+            // Restore Location
+            if (!LoadedGame->PlayerLocation.IsZero())
+            {
+                SetActorLocation(LoadedGame->PlayerLocation);
+                SetActorRotation(LoadedGame->PlayerRotation);
+            }
+
+            // --- CHANGE: Show Widget Message ---
+            // Create a formatted string to tell the user what happened
+            FString LoadMsg = FString::Printf(TEXT("Game Loaded. Items: %d"), LoadedGame->InventoryItems.Num());
+            ShowNotification(FText::FromString(LoadMsg));
+        }
+    }
+    else
+    {
+        // --- CHANGE: Inform user if no save exists ---
+        ShowNotification(FText::FromString("No Saved Game Found!"));
+    }
+}
+
+// 3. UPDATE LEVEL 3 CHECKPOINT (Stack Push)
 void AEscapeCharacter::PushSafeLocation()
 {
     FVector CurrentLoc = GetActorLocation();
@@ -512,32 +539,80 @@ void AEscapeCharacter::PushSafeLocation()
     // PUSH: Add to top of stack
     LocationStack.Push(CurrentLoc);
 
-    if (GEngine)
-        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Checkpoint!"));
+    // --- CHANGE: Show "Checkpoint" on screen using your Widget ---
+    ShowNotification(FText::FromString("Checkpoint Reached"));
 }
 
+// 4. UPDATE REWIND (Stack Pop)
 void AEscapeCharacter::PopAndRewind()
 {
     // POP: Check if we have a saved spot
     if (LocationStack.Num() > 0)
     {
-        // Take the last location off the stack
         FVector LastSafeSpot = LocationStack.Pop();
 
-        // Teleport the player
         SetActorLocation(LastSafeSpot);
-
-        // Stop movement so you don't keep falling
         GetCharacterMovement()->StopMovementImmediately();
 
-        if (GEngine)
-            GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, TEXT("You fell!"));
+        // --- CHANGE: Tell player why they teleported ---
+        ShowNotification(FText::FromString("Rewinding Time..."));
     }
     else
     {
-        // If stack is empty, reset to 0,0,100 (Level Start)
         SetActorLocation(FVector(0, 0, 100));
         GetCharacterMovement()->StopMovementImmediately();
+
+        ShowNotification(FText::FromString("Restarting Level"));
     }
 }
-//LEVEL 3 EDITS END 
+
+// ... includes ...
+
+void AEscapeCharacter::CompleteLevel(FName NextLevelName)
+{
+    // 1. Notify User via UI (Visual Feedback)
+    FString Msg = FString::Printf(TEXT("Progress Saved. Entering %s..."), *NextLevelName.ToString());
+    ShowNotification(FText::FromString(Msg));
+
+    // 2. Create Save Instance
+    if (UEscapeSaveGame* SaveInst = Cast<UEscapeSaveGame>(UGameplayStatics::CreateSaveGameObject(UEscapeSaveGame::StaticClass())))
+    {
+        // 3. CRITICAL: Save the *Next* Level as the Current Level
+        // This ensures "Load Game" puts them at the start of the new level, not the end of the old one.
+        SaveInst->CurrentLevelName = NextLevelName;
+        SaveInst->PlayerLocation = FVector::ZeroVector; // Reset position for new level
+        SaveInst->PlayerRotation = FRotator::ZeroRotator;
+
+        // 4. Save Inventory (Keep items)
+        if (InventoryComp)
+        {
+            SaveInst->InventoryItems.Empty();
+            for (AItemBase* Item : InventoryComp->GetItems())
+            {
+                if (Item) SaveInst->InventoryItems.Add(Item->ItemID);
+            }
+        }
+
+        // 5. Write to Disk
+        UGameplayStatics::SaveGameToSlot(SaveInst, "EscapeSaveSlot", 0);
+    }
+
+    // 6. Transition after a short delay so the user sees the message
+    FTimerHandle TimerHandle;
+    GetWorldTimerManager().SetTimer(TimerHandle, [this, NextLevelName]()
+        {
+            UGameplayStatics::OpenLevel(this, NextLevelName);
+        }, 1.5f, false);
+}
+
+void AEscapeCharacter::ClearSaveGameData()
+{
+    // 1. Notify User
+    ShowNotification(FText::FromString("ESCAPED! Save Data Cleared."));
+
+    // 2. Delete the file
+    if (UGameplayStatics::DoesSaveGameExist("EscapeSaveSlot", 0))
+    {
+        UGameplayStatics::DeleteGameInSlot("EscapeSaveSlot", 0);
+    }
+}

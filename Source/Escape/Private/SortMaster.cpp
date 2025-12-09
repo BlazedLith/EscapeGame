@@ -2,6 +2,9 @@
 #include "PressurePlate.h" 
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
+#include "EscapeCharacter.h"    
+#include "EscapeSaveGame.h"        
+#include "Blueprint/UserWidget.h"
 
 ASortMaster::ASortMaster()
 {
@@ -24,16 +27,17 @@ void ASortMaster::Tick(float DeltaTime)
         if (Plate->GetCurrentValue() == 0)
         {
             bAllPlatesFull = false;
+            break;
         }
     }
+
     if (bAllPlatesFull)
     {
         StabilityTimer += DeltaTime;
-
         if (StabilityTimer > 1.0f && !bHasCheckedAttempt)
         {
-            RunSelectionSortCheck(); 
-            bHasCheckedAttempt = true; 
+            RunSelectionSortCheck();
+            bHasCheckedAttempt = true;
         }
     }
     else
@@ -56,7 +60,6 @@ void ASortMaster::RunSelectionSortCheck()
     TArray<int32> SortedValues = CurrentValues;
     int32 n = SortedValues.Num();
 
-    // Selection Sort Algo
     for (int32 i = 0; i < n - 1; i++)
     {
         int32 MinIdx = i;
@@ -82,22 +85,52 @@ void ASortMaster::RunSelectionSortCheck()
         }
     }
 
+    // 3. HANDLE RESULT
     if (bCorrect)
     {
+        // PUZZLE SOLVED 
         if (TargetGate) TargetGate->Destroy();
         bPuzzleSolved = true;
+
+        // Clear Save Data (Game Completed requirement)
+        AEscapeCharacter* PlayerChar = Cast<AEscapeCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+        if (PlayerChar)
+        {
+            PlayerChar->ClearSaveGameData();
+        }
+
         if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("SUCCESS! Gate Opened."));
     }
     else
     {
+        //  PUZZLE FAILED 
         StrikeCount++;
 
         if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("WRONG ORDER! Strike %d / 3"), StrikeCount));
 
+        // If 3 strikes, PENALTY: Send back to Level 1
         if (StrikeCount >= 3)
         {
-            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("GAME OVER - Restarting Level..."));
+            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("GAME OVER - Returning to Level 1..."));
 
+            // We must update the save file so "Load Game" puts them in Level 1, not back here.
+            if (UEscapeSaveGame* SaveInst = Cast<UEscapeSaveGame>(UGameplayStatics::CreateSaveGameObject(UEscapeSaveGame::StaticClass())))
+            {
+                // Reset to Level 1
+                // MAKE SURE THIS MATCHES YOUR LEVEL 1 MAP NAME EXACTLY!
+                SaveInst->CurrentLevelName = FName("Lvl_FirstPerson");
+
+                // Reset Position
+                SaveInst->PlayerLocation = FVector::ZeroVector;
+
+                // Clear Inventory (Penalty: Start Fresh)
+                SaveInst->InventoryItems.Empty();
+
+                // Save to Disk
+                UGameplayStatics::SaveGameToSlot(SaveInst, "EscapeSaveSlot", 0);
+            }
+
+            // Transition
             UGameplayStatics::OpenLevel(this, FName("Lvl_FirstPerson"));
         }
     }
