@@ -46,7 +46,7 @@ The player must navigate through three distinct levels, each introducing new mec
 ### Build Instructions
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/BlazedLith/EscapeGame.git](https://github.com/BlazedLith/EscapeGame.git)
+    git clone https://github.com/BlazedLith/EscapeGame.git
     ```
 2.  **Generate Project Files:**
     * Right-click `EscapeGame.uproject` and select **"Generate Visual Studio project files"**.
