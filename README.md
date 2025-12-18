@@ -11,7 +11,7 @@ The player must navigate through three distinct levels, each introducing new mec
     * **Tech:** Finite State Machines (FSM) for doors and Linear Interpolation (Lerp) for object movement.
 2.  **Level 2: The Facility (Search & Optimization)**
     * **Goal:** Collect "Data Shards" while evading an AI stalker.
-    * **Tech:** **A* Pathfinding** with Priority Queues and **Hash Sets** for $O(1)$ lookup. [cite_start]Resource collection is optimized via **Pointer Caching** [cite: 371-386].
+    * **Tech:** **A* Pathfinding** with Priority Queues and **Hash Sets** for O(1) lookup. Resource collection is optimized via **Pointer Caching**.
 3.  **Level 3: The Gauntlet (Advanced Structures)**
     * **Goal:** Survive a procedural bridge and solve a sorting puzzle.
     * **Tech:** **FIFO Queue** for infinite bridge generation and **LIFO Stack** for a "Time Rewind" checkpoint mechanic.
@@ -24,7 +24,7 @@ The player must navigate through three distinct levels, each introducing new mec
 | Feature | Data Structure / Algorithm | Complexity | Use Case |
 | :--- | :--- | :--- | :--- |
 | **Enemy Navigation** | Priority Queue (Min-Heap behavior) | $O(E \log V)$ | A* Open List management. |
-| **Path Optimization** | Hash Set (`TSet`) | $O(1)$ | A* Closed List for instant visited checks. |
+| **Path Optimization** | Hash Set (`TSet`) | O(1) | A* Closed List for instant visited checks. |
 | **Time Rewind** | Stack (`TArray` as LIFO) | $O(1)$ | Reverting player position to safe spots. |
 | **Procedural Bridge** | Queue (`TQueue` FIFO) | $O(1)$ | Managing infinite platform spawning/destruction. |
 | **Puzzle Validator** | Array & Selection Sort | $O(N^2)$ | verifying physical object arrangement. |
