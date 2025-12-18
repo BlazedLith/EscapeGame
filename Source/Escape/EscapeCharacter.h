@@ -10,7 +10,8 @@
 #include "EscapeMessageWidget.h"    
 #include "Kismet/GameplayStatics.h" 
 #include "EscapeSaveGame.h"
-#include "EscapeCharacter.generated.h"
+#include "DataCube.h" // <--- MOVED UP! Must be above .generated.h
+#include "EscapeCharacter.generated.h" // <--- THIS MUST BE LAST
 
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -32,10 +33,7 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     // --- UI Functions ---
-    // Show the Note Reader UI
     void ShowInspectionUI(FText Content);
-
-    // Show a notification on screen (Locked door, Empty slot, etc.)
     void ShowNotification(FText Message);
 
     UFUNCTION(BlueprintCallable, Category = "Save")
@@ -47,37 +45,38 @@ public:
     void SetInventoryVisible(bool bVisible);
 
     // --- Getters ---
-    // Returns the inventory component so other classes (like Door) can check for keys
     FORCEINLINE UInventoryComponent* GetInventoryComponent() const { return InventoryComp; }
-
     USkeletalMeshComponent* GetFirstPersonMesh() const { return FPSMesh; }
     UCameraComponent* GetFirstPersonCameraComponent() const { return FPSCamera; }
 
+    // Handles saving the specific "Next Level" name and then opening it
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void CompleteLevel(FName NextLevelName);
+
+    // Deletes the save file (Used when the game is fully beaten)
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void ClearSaveGameData();
+
 protected:
     virtual void BeginPlay() override;
-
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     UFUNCTION()
     void HideNotification();
 
     // --- UI COMPONENTS ---
-
-    // Notification Widget (Locked, Needs Key, etc.)
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UEscapeMessageWidget> MessageWidgetClass;
 
     UPROPERTY()
     UEscapeMessageWidget* MessageWidget;
 
-    // Note Reader Widget
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UEscapeInspectionWidget> InspectionWidgetClass;
 
     UPROPERTY()
     UEscapeInspectionWidget* InspectionWidget;
 
-    // Inventory Widget
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> InventoryWidgetClass;
 
@@ -88,15 +87,10 @@ protected:
     UInventoryWidgetController* InventoryWidgetController;
 
     // --- INTERACTION SETTINGS ---
-
-    // Trace distance (3 meters)
     float InteractionDistance = 300.0f;
-
-    // Helper to do the trace
     bool GetLookTarget(FHitResult& OutHit);
 
     // --- VISUAL COMPONENTS ---
-
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     USkeletalMeshComponent* FPSMesh;
 
@@ -107,7 +101,6 @@ protected:
     UInventoryComponent* InventoryComp;
 
     // --- INPUT ACTIONS ---
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* JumpAction;
 
@@ -118,7 +111,7 @@ protected:
     UInputAction* LookAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-    UInputAction* InteractAction; // Key: E
+    UInputAction* InteractAction;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* MouseLookAction;
@@ -128,20 +121,14 @@ protected:
 
     // --- INTERNAL FUNCTIONS ---
     virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-
     void MoveInput(const FInputActionValue& Value);
     void LookInput(const FInputActionValue& Value);
-
     void SelectInventorySlot(int32 Slot);
-
-    // Input helper functions
     void SelectSlot1(); void SelectSlot2(); void SelectSlot3();
     void SelectSlot4(); void SelectSlot5(); void SelectSlot6();
-
-    void UseSelectedItem(); // Key: F
-    void TryPickupItem();   // Key: E
+    void UseSelectedItem();
+    void TryPickupItem();
     void QuitGame();
-
     bool bIsPacmanMode = false;
 
     UFUNCTION(BlueprintCallable, Category = "Input")
@@ -155,4 +142,23 @@ protected:
 
     UFUNCTION(BlueprintCallable, Category = "Input")
     virtual void DoJumpEnd();
+
+    // 1. The Stack (Undo Mechanic)
+    UPROPERTY()
+    TArray<FVector> LocationStack;
+
+    // The "Kill Height" for auto-rewind
+    float KillZThreshold = -2000.0f;
+
+    // 2. The Physics Grabbing Variable
+    UPROPERTY()
+    ADataCube* HeldCube = nullptr;
+
+public:
+    // Stack Functions
+    UFUNCTION(BlueprintCallable, Category = "Level3")
+    void PushSafeLocation();
+
+    UFUNCTION(BlueprintCallable, Category = "Level3")
+    void PopAndRewind();
 };
