@@ -70,8 +70,8 @@ Refer to the setup folder. Download the setup file and install the game then sim
 | **Look** | Mouse |
 | **Jump** | `Spacebar` |
 | **Interact / Pick Up** | `E` |
-| **Time Rewind (L3)** | `R` |
-| **Pause Menu** | `Esc` |
+| **Use** | `F` |
+| **Exit** | `P` |
 
 ---
 
@@ -80,7 +80,7 @@ Refer to the setup folder. Download the setup file and install the game then sim
 * **Wasiq Amir:** Level 1 Design, Finite State Machines (Door/Safe Logic).
 * **Zayna Qasim:** Level 2 Design, Enemy AI (A* Pathfinding), Resource Optimization.
 * **Maha Mohsin:** Level 3 Design, Procedural Bridge (Queues), Time Rewind (Stacks).
-* **Maryam Asif:** Technical Documentation, Performance Profiling, Big-O Analysis.
+* **Maryam Asif:** Technical Documentation, Big-O Analysis.
 * **Luqman Shehzad:** Architecture Diagrams, Report Compilation, Quality Assurance.
 
 ---
