@@ -2,7 +2,7 @@
 
 **Escape Game** is a first-person puzzle-adventure built in **Unreal Engine 5** using C++. The project demonstrates the practical application of advanced data structures and algorithms (A*, Hash Sets, Queues, Stacks) to solve real-time game development challenges.
 
-## 🎮 Game Overview
+## Game Overview
 
 The player must navigate through three distinct levels, each introducing new mechanics and increasing algorithmic complexity:
 
@@ -18,7 +18,7 @@ The player must navigate through three distinct levels, each introducing new mec
 
 ---
 
-## ⚙️ Technical Features
+## Technical Features
 
 ### Algorithms & Data Structures
 | Feature | Data Structure / Algorithm | Complexity | Use Case |
@@ -37,7 +37,7 @@ The player must navigate through three distinct levels, each introducing new mec
 
 ---
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 * **Unreal Engine 5.1+**
@@ -57,12 +57,12 @@ The player must navigate through three distinct levels, each introducing new mec
     * Open `EscapeGame.uproject` to launch the Unreal Editor.
     * Press **Play** to start from the Main Menu.
 
-### Alternative
+### Alternative Setup Method
 Refer to the setup folder. Download the setup file and install the game then simple open the .exe file. (Needs DirectX 12)
 
 ---
 
-## 🕹️ Controls
+## Controls
 
 | Action | Input |
 | :--- | :--- |
@@ -75,7 +75,7 @@ Refer to the setup folder. Download the setup file and install the game then sim
 
 ---
 
-## 👥 Team Contributions
+## Team Contributions
 
 * **Wasiq Amir:** Level 1 Design, Finite State Machines (Door/Safe Logic).
 * **Zayna Qasim:** Level 2 Design, Enemy AI (A* Pathfinding), Resource Optimization.
